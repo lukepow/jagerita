@@ -90,3 +90,7 @@ import pandas as pd
 query = "SELECT * FROM your_table"
 df = pd.read_sql_query(query, conn)
 ```
+
+
+ad_spend = [10105, 6210, 4580, 5030, 6996, 6156, 7214, 6753]
+revenue = [57435, 57435, 51871, 46052, 45926, 50443, 59107]
