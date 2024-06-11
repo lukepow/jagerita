@@ -1,0 +1,17 @@
+{
+  "name": "lambda_scripts",
+  "version": "1.0.0",
+  "description": "scripts to automate data retrieval",
+  "main": "ads.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Luke Powers",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "moment": "^2.30.1"
+  }
+}

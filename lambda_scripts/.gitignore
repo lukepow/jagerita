@@ -1,0 +1,4 @@
+node_modules/
+.env
+index.js
+retrieve_report.js
