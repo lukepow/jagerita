@@ -15,17 +15,15 @@ const profileIds = {"US": process.env.US_PROFILE_ID, "CA": process.env.CA_PROFIL
 const tokenUrl = "https://api.amazon.com/auth/o2/token/";
 const apiUrl = "https://advertising-api.amazon.com/reporting/reports";
 
-// get and format yesterday's date to YYYY/MM/DD
-export function getYesterdayDate() {
-  const date = new Date();
-  date.setDate(date.getDate()-1)
+// format date to YYYY-MM-DD
+export function formatDate(date) {
   const year = date.getFullYear();
   let month = date.getMonth() + 1;
   let day = date.getDate();
   month = month < 10 ? '0' + month : month;
   day = day < 10 ? '0' + day : day;
-  const yesterday = `${year}-${month}-${day}`;
-  return yesterday;
+  const formattedDate = `${year}-${month}-${day}`;
+  return formattedDate;
 } 
 
 // retrieves access token using refresh token, client id, and client secret
@@ -52,14 +50,15 @@ export async function getAccessToken() {
 // request SP Advertised Products report to be generated.
 export async function requestReport(url, profileId, accessToken, date, reportInfo) {
   try{
+    const columns = Object.keys(reportInfo.columns);
     const requestBody = {
-      name: "SP Advertised Product Report  6/9",
-      startDate: date,
-      endDate: date,
+      name: `${reportInfo.adProduct} report ${date}`,
+      startDate: reportInfo.startDate,
+      endDate: reportInfo.endDate,
       configuration: {
         "adProduct": reportInfo.adProduct,
         "groupBy": reportInfo.groupBy,
-        "columns": reportInfo.columns,
+        "columns": columns,
         "reportTypeId": reportInfo.reportTypeId,
         "timeUnit": "DAILY",
         "format": "GZIP_JSON",
@@ -121,4 +120,18 @@ export async function getReportData(url) {
   } catch(err) {
       console.error('Error:', err.response ? err.response.data : err.message);
   }
+}
+
+
+export function reorderColumns(jsonData, columns) {
+  const apiColumns = Object.keys(columns);
+  const worksheetColumns = Object.values(columns);
+  const reorderedData = jsonData.map(row => {
+    const reorderedRow = {};
+    apiColumns.forEach((column, index) => {
+      reorderedRow[worksheetColumns[index]] = row[column];
+    });
+    return reorderedRow;
+  });
+  return reorderedData;
 }
