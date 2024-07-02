@@ -15,17 +15,6 @@ const profileIds = {"US": process.env.US_PROFILE_ID, "CA": process.env.CA_PROFIL
 const tokenUrl = "https://api.amazon.com/auth/o2/token/";
 const apiUrl = "https://advertising-api.amazon.com/reporting/reports";
 
-// format date to YYYY-MM-DD
-export function formatDate(date) {
-  const year = date.getFullYear();
-  let month = date.getMonth() + 1;
-  let day = date.getDate();
-  month = month < 10 ? '0' + month : month;
-  day = day < 10 ? '0' + day : day;
-  const formattedDate = `${year}-${month}-${day}`;
-  return formattedDate;
-} 
-
 // retrieves access token using refresh token, client id, and client secret
 export async function getAccessToken() {
   try {
@@ -58,7 +47,7 @@ export async function requestReport(url, profileId, accessToken, date, reportInf
       configuration: {
         "adProduct": reportInfo.adProduct,
         "groupBy": reportInfo.groupBy,
-        "columns": columns,
+        "columns": reportInfo.columns,
         "reportTypeId": reportInfo.reportTypeId,
         "timeUnit": "DAILY",
         "format": "GZIP_JSON",
@@ -123,15 +112,3 @@ export async function getReportData(url) {
 }
 
 
-export function reorderColumns(jsonData, columns) {
-  const apiColumns = Object.keys(columns);
-  const worksheetColumns = Object.values(columns);
-  const reorderedData = jsonData.map(row => {
-    const reorderedRow = {};
-    apiColumns.forEach((column, index) => {
-      reorderedRow[worksheetColumns[index]] = row[column];
-    });
-    return reorderedRow;
-  });
-  return reorderedData;
-}
