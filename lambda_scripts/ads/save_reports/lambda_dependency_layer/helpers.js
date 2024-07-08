@@ -25,25 +25,7 @@ const drive = google.drive({
   auth: auth,
 });
 
-export async function uploadFileToSharedDrive(folderId, fileBuffer, fileName) {
-
-  const metaData = {
-    "name": fileName,
-    "parents": [folderId]
-  };
-  const media = {
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    body: Readable.from(fileBuffer)
-  };
-
-  await drive.files.create({
-    resource: metaData,
-    media: media,
-    fields: "id",
-    supportsAllDrives: true
-  });
-}
-
+// Columns that were not present in Ads API that need to be added
 const columnsToAdd = {
   SPONSORED_PRODUCTS: [
     {
@@ -145,6 +127,7 @@ const columnsToAdd = {
   ]
 }
 
+// Column names from API were different from column names from console report. This maps the transformation
 const colsToRename = {
   SPONSORED_PRODUCTS: {
     // Key/value of object is column name of API/ column name of report from console
@@ -189,7 +172,7 @@ export async function getAccessToken() {
   }
 }
 
-
+// Return report IDs saved in S3 bucket from the other lambda
 export function getReportIds (bucket, key) {
   const client = new S3Client({ region: "us-west-2" });
   return new Promise(async (resolve, reject) => {
@@ -209,6 +192,7 @@ export function getReportIds (bucket, key) {
   })
 }
 
+// query api endpoint to return report URL for download
 export async function getReportUrl(accessToken, reportId) {
   const url = `${apiUrl}/${reportId}`;
 
@@ -228,6 +212,7 @@ export async function getReportUrl(accessToken, reportId) {
   }
 }
 
+// return report data from report URL
 export async function getReportData(url) {
   try {
     const response = await axios.get(url, {
@@ -244,6 +229,7 @@ export async function getReportData(url) {
   }
 }
 
+// Some columns were returned by API in different orders. This reorders them
 export function reorderColumns(jsonData, columns) {
   const apiColumns = Object.keys(columns);
   const worksheetColumns = Object.values(columns);
@@ -257,6 +243,7 @@ export function reorderColumns(jsonData, columns) {
   return reorderedData;
 }
 
+// Columns not present in API are added in to JSON data
 export function addColumns(jsonData, newColData) {
   const completedData = jsonData.map(row => {
     newColData.forEach(colInfo => {
@@ -273,7 +260,6 @@ export function addColumns(jsonData, newColData) {
         const result = colInfo.value[0] / row[colInfo.value[1]] * row[colInfo.value[2]];
         row[colInfo.name] = isNaN(result) || result === Infinity ? null : result;
       } else {
-        // access to portfolio id
         const portfolioId = row.portfolioId;
         row[colInfo.name] = colInfo.value[portfolioId];
       }
@@ -283,6 +269,7 @@ export function addColumns(jsonData, newColData) {
   return completedData;
 }
 
+// function to do all data postprocessing
 export function processData(reportData, reportInfo) {
   const reportType = reportInfo.adProduct;
   const completedData = addColumns(reportData, columnsToAdd[reportType]);
@@ -290,3 +277,21 @@ export function processData(reportData, reportInfo) {
   return orderedData;
 }
 
+// Use google drive API to upload to specified folder
+export async function uploadFileToSharedDrive(folderId, fileBuffer, fileName) {
+  const metaData = {
+    "name": fileName,
+    "parents": [folderId]
+  };
+  const media = {
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    body: Readable.from(fileBuffer)
+  };
+
+  await drive.files.create({
+    resource: metaData,
+    media: media,
+    fields: "id",
+    supportsAllDrives: true
+  });
+}
