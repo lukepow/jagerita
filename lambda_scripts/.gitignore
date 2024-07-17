@@ -1,6 +1,5 @@
 node_modules/
 .env
-index.js
 retrieve_report.js
 .DS_STORE
 .DS_Store
