@@ -269,6 +269,28 @@ export function addColumns(jsonData, newColData) {
   return completedData;
 }
 
+function dateToSerialNumber(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const serialNumber = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+  return serialNumber;
+}
+
+export function serializeDate(worksheet) {
+  const range = XLSX.utils.decode_range(worksheet['!ref']);
+  for (let row = 1; row <= range.e.r; row++) {
+    const cellRef = XLSX.utils.encode_cell({ r: row, c: 0 });
+    const cell = worksheet[cellRef];
+  
+    if (cell && cell.t === 's') { // Check if the cell exists and is a string
+      const serialNumber = dateToSerialNumber(cell.v);
+      cell.v = serialNumber;
+      cell.t = 'n'; // Set the cell type to number
+      cell.z = 'mmm dd, yyyy'; // Set the display format to the desired date format
+    }
+  }
+}
+
 // function to do all data postprocessing
 export function processData(reportData, reportInfo) {
   const reportType = reportInfo.adProduct;
