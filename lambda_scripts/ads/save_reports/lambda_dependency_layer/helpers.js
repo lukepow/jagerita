@@ -4,6 +4,7 @@ import zlib from "zlib";
 import { google } from "googleapis";
 import process from "process";
 import { Readable } from "stream";
+import XLSX from "xlsx";
 
 const tokenUrl = "https://api.amazon.com/auth/o2/token/";
 const apiUrl = "https://advertising-api.amazon.com/reporting/reports";
