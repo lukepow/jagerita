@@ -1,11 +1,8 @@
 import { SellingPartner } from 'amazon-sp-api';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
-import dotenv from 'dotenv';
 import { json2csv } from 'json-2-csv';
 import { flatten } from 'flat';
-
-dotenv.config();
 
 const refreshToken = process.env.REFRESH_TOKEN;
 const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
@@ -13,7 +10,7 @@ const marketplaceIds = process.env.MARKETPLACE_IDS
 const folderId = process.env.FOLDER_ID;
 
 const date = new Date();
-date.setDate(beginning.getDate()-3);
+date.setDate(beginning.getDate()-3); // set date to 3 days ago
 
 const dateOptions = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' };
 const reportDate = date.toLocaleString('en-CA', dateOptions);
@@ -142,5 +139,3 @@ export const handler = async (event) => {
     }
   }
 }
-
-await handler();

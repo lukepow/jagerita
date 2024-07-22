@@ -1,5 +1,3 @@
 node_modules/
 .env
-retrieve_report.js
 .DS_STORE
-.DS_Store

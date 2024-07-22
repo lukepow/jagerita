@@ -1,0 +1,22 @@
+{
+  "name": "second_lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.609.0",
+    "axios": "^1.7.2",
+    "googleapis": "^140.0.1",
+    "process": "^0.11.10",
+    "stream": "^0.0.3",
+    "xlsx": "^0.18.5",
+    "zlib": "^1.0.5"
+  }
+}
