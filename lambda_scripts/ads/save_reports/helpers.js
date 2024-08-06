@@ -1,38 +1,63 @@
+// library for sending HTTP requests
 import axios from "axios";
+// library for interacting with S3 resources
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+// library to get data from the report URL
 import zlib from "zlib";
+// client for interacting with the google drive API
 import { google } from "googleapis";
-import process from "process";
+// library for working with buffer data
 import { Readable } from "stream";
+// library for working with XLSX files
 import XLSX from "xlsx";
 
 const tokenUrl = "https://api.amazon.com/auth/o2/token/";
 const apiUrl = "https://advertising-api.amazon.com/reporting/reports";
 
+/*
+the process.env variables below are environment variables (they keep the values of sensitive variables encrypted).
+You can find or edit them by going to the configuration tab in the lambda function and clicking environment variables on
+the right.
+*/
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
 const refreshToken = process.env.REFRESH_TOKEN;
 const profileId = process.env.US_PROFILE_ID;
 const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
 
+// client to authorize requests to the google drive API
 const auth = new google.auth.GoogleAuth({
   credentials: serviceAccount,
   scopes: ['https://www.googleapis.com/auth/drive']
   }
 );
 
+// client to make requests to google drive API
 const drive = google.drive({
   version: 'v3',
   auth: auth,
 });
 
-// Columns that were not present in Ads API that need to be added
+/* 
+Columns that were not present in Ads API need to be added to match the console reports. They are all present in the
+nested object `columnsToAdd`
+This object contains each ads report as the object's key and an array of objects as the value. Each object in the array 
+corresponds to a column that will be added to the associated report.
+The `name` property is added as the column name, and the value property contains the column values.
+- If the `value` property contains an array with 2 column names (ie. 7 Day Conversion Rate), the column values are 
+  the result of dividing the values of the 2 columns referenced in the array.
+- if the `value` property contains an array with 1 column name (ie. )
+- If the `value` property is a string, the column value is that string as a static value (ie. Cost Type).
+- The VCPM column in SPONSORED_BRANDS was unique bc it is calculated as 1000 / viewable impressions * cost, so it
+  is handled as such
+The transformation happens in the `addColumns` function
+*/
 const columnsToAdd = {
   SPONSORED_PRODUCTS: [
-    {
-      name: "Portfolio name",
-      value: {"106981549316271": "Double Spend", null: "No Portfolio", "65755187546504": "W Underwear Everyday Cheeky Brief", "280492966857691": "M Tops Everyday SS V-Neck", "5063832534086": "W Tops Everyday Cami", "165024236637009": "M Tops Everyday SS Crew", "104816120666296": "M Underwear Classic Boxer", "259764919944753": "M Tops Everyday SS Henley", "38813994682763": "M Tops Everyday SS Button Up", "25893144515343": "W Bottoms Everyday Flex Legging Pocket", "116842281474380": "W Tops Everyday SS Henley", "3896807676598": "W Tops Pro-Knit Hoodie Zip", "73870559377363": "W Underwear Everyday Hipster", "44809391797534": "W Bottoms Longhaul Pants Weekender", "131285460150335": "M Bottoms Longhaul Pant Shop", "23115784546632": "Auto Tests"},
-    },
+    // {
+    //   name: "Portfolio name",
+    //   value: {"106981549316271": "Double Spend", null: "No Portfolio", "65755187546504": "W Underwear Everyday Cheeky Brief", "280492966857691": "M Tops Everyday SS V-Neck", "5063832534086": "W Tops Everyday Cami", "165024236637009": "M Tops Everyday SS Crew", "104816120666296": "M Underwear Classic Boxer", "259764919944753": "M Tops Everyday SS Henley", "38813994682763": "M Tops Everyday SS Button Up", "25893144515343": "W Bottoms Everyday Flex Legging Pocket", "116842281474380": "W Tops Everyday SS Henley", "3896807676598": "W Tops Pro-Knit Hoodie Zip", "73870559377363": "W Underwear Everyday Hipster", "44809391797534": "W Bottoms Longhaul Pants Weekender", "131285460150335": "M Bottoms Longhaul Pant Shop", "23115784546632": "Auto Tests"},
+    // },
     {
       name: "7 Day Conversion Rate",
       value: ["purchases7d","clicks"],
@@ -132,7 +157,7 @@ const columnsToAdd = {
 const colsToRename = {
   SPONSORED_PRODUCTS: {
     // Key/value of object is column name of API/ column name of report from console
-    "date": "Date", "Portfolio name": "Portfolio name", "campaignBudgetCurrencyCode": "Currency",
+    "date": "Date", "portfolioId": "Portfolio ID", "campaignBudgetCurrencyCode": "Currency",
     "campaignName": "Campaign Name", "adGroupName": "Ad Group Name", "advertisedSku": "Advertised SKU",
     "advertisedAsin": "Advertised ASIN", "impressions": "Impressions", "clicks": "Clicks", 
     "clickThroughRate": "Click-Thru Rate (CTR)", "costPerClick": "Cost Per Click (CPC)", "spend": "Spend",
@@ -193,8 +218,9 @@ export function getReportIds (bucket, key) {
   })
 }
 
-// query api endpoint to return report URL for download
+// query API endpoint to return report URL for download
 export async function getReportUrl(accessToken, reportId) {
+  // endpoint is url for API with report ID added to the path
   const url = `${apiUrl}/${reportId}`;
 
   const headers = {
@@ -220,8 +246,11 @@ export async function getReportData(url) {
       responseType: 'arraybuffer'
     });
 
+    // data needs to be gathered via buffer
     const bytesResponse = zlib.gunzipSync(Buffer.from(response.data));
+    // report data gets transformed to JSON string
     const jsonStr = bytesResponse.toString("utf-8");
+    // string is parsed and returned as javascript object
     const reportData = JSON.parse(jsonStr);
     return(reportData);
 
@@ -232,8 +261,11 @@ export async function getReportData(url) {
 
 // Some columns were returned by API in different orders. This reorders them
 export function reorderColumns(jsonData, columns) {
+  // array of columns with API's names
   const apiColumns = Object.keys(columns);
+  // array of columns named like in the console report
   const worksheetColumns = Object.values(columns);
+  // loop through report data one object at a time, build a new object with correct names and ordering
   const reorderedData = jsonData.map(row => {
     const reorderedRow = {};
     apiColumns.forEach((column, index) => {
@@ -248,21 +280,23 @@ export function reorderColumns(jsonData, columns) {
 export function addColumns(jsonData, newColData) {
   const completedData = jsonData.map(row => {
     newColData.forEach(colInfo => {
+      // if `value` property of the new column is a string, the column will contain the string (statically)
       if (typeof colInfo.value !== "object") {
         row[colInfo.name] = colInfo.value;
+      // if `value` prop is an array of length 2, divide the values of the specified columns
       } else if (colInfo.value.length === 2) {
         const numerator = row[colInfo.value[0]];
         const denominator = row[colInfo.value[1]];
         const result = numerator / denominator;
+        // if there's a divide by 0 error etc. the value will be null
         row[colInfo.name] = isNaN(result) || result === Infinity ? null : result;
+      // if `value` prop is an array of length 1, the value is the same as the value for a different column
       } else if (colInfo.value.length === 1) {
         row[colInfo.name] = row[colInfo.value[0]]
+      // if `value` prop is an array of length 3, it is for VCPM and needs it's own handling
       } else if (colInfo.value.length === 3) {
         const result = colInfo.value[0] / row[colInfo.value[1]] * row[colInfo.value[2]];
         row[colInfo.name] = isNaN(result) || result === Infinity ? null : result;
-      } else {
-        const portfolioId = row.portfolioId;
-        row[colInfo.name] = colInfo.value[portfolioId];
       }
     });
     return row;
@@ -270,15 +304,20 @@ export function addColumns(jsonData, newColData) {
   return completedData;
 }
 
+// change date string to serialized number
 function dateToSerialNumber(dateStr) {
+  // isolate date components and convert to number
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
+  // serial date is the number of days since Dec 31st 1899
   const serialNumber = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
   return serialNumber;
 }
 
+// convert date value in XLSX worksheet
 export function serializeDate(worksheet) {
   const range = XLSX.utils.decode_range(worksheet['!ref']);
+  // iterate through rows in date column and transform them to serialized date
   for (let row = 1; row <= range.e.r; row++) {
     const cellRef = XLSX.utils.encode_cell({ r: row, c: 0 });
     const cell = worksheet[cellRef];

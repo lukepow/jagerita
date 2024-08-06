@@ -1,5 +1,5 @@
 # Code for amazon reporting automation
-The structure of this git repository is some folders which contains everything necessary to invoke a lambda function (the index.js file). Inside each folder is a subfolder of dependencies which I used to create a zip file and included as a lambda layer in AWS. I'll briefly go through each folder
+The structure of this git repository is some folders which represent a lambda currently on AWS. The folders contain an index.js file which is the actual lambda function that gets invoked and a .zip file which contains all the dependencies needed by index.js to run properly in a node.js environment (package.json, node modules, and sometimes helper functions).
 
 ## Sales report
 This is the simplest piece. It uses the SP-API to query for sales data in tsv format. The data is passed into a helper function to do a bit of cleaning to make the columns match the console report generated (in particular, adding the url column). The data is then passed in as a buffer to the google drive api which saves it in the appropriate folder.
